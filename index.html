@@ -1,1 +1,460 @@
-# zeus-slit-gacor
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gates of Olympus - Deposit Simulation Edition</title>
+<style>
+  /* --- BASE STYLES --- */
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif; user-select: none; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), 
+                url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;
+    display: flex; justify-content: center; align-items: center; color: white; padding: 20px 10px;
+  }
+  .hidden { display: none !important; }
+  
+  /* --- AUTH & DEPOSIT MODAL CONTAINER --- */
+  .auth-container {
+    width: 100%; max-width: 400px; background: rgba(15, 23, 42, 0.96);
+    border: 3px solid #facc15; border-radius: 20px; padding: 25px 20px;
+    box-shadow: 0 0 35px rgba(250, 204, 21, 0.3); text-align: center;
+  }
+  .auth-container h2 { color: #facc15; font-size: 24px; margin-bottom: 20px; text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-group { margin-bottom: 14px; text-align: left; }
+  .input-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
+  .input-group input, .input-group select {
+    width: 100%; padding: 10px 12px; background: #020617; border: 2px solid #334155; border-radius: 8px; color: white; font-size: 14px; outline: none;
+  }
+  .input-group input:focus { border-color: #facc15; }
+  .auth-btn {
+    width: 100%; padding: 12px; background: linear-gradient(180deg, #facc15, #eab308); border: none; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; color: #000;
+  }
+  .switch-auth-lnk { margin-top: 15px; font-size: 13px; color: #38bdf8; cursor: pointer; }
+  .error-msg { color: #ef4444; font-size: 12px; margin-top: 8px; font-weight: bold; }
+  .success-msg { color: #10b981; font-size: 12px; margin-top: 8px; font-weight: bold; }
+
+  /* --- GAME SCREEN (6x5) --- */
+  .game-container {
+    width: 100%; max-width: 430px; background: rgba(10, 10, 25, 0.95);
+    border: 2px solid #d97706; box-shadow: 0 0 40px rgba(0,0,0,0.9);
+    display: flex; flex-direction: column; border-radius: 16px; overflow: hidden;
+  }
+  .game-top-bar { padding: 8px 12px; background: #000; display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px solid #1e293b; }
+  .game-header { background: linear-gradient(180deg, #1e1b4b, transparent); padding: 8px; text-align: center; }
+  .game-title { font-size: 18px; color: #facc15; font-style: italic; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .tumble-box { background: linear-gradient(180deg, #7c2d12, #451a03); border: 2px solid #facc15; border-radius: 6px; width: 60%; margin: 6px auto 0 auto; padding: 3px; font-size: 12px; text-align: center; }
+  .tumble-box span { color: #facc15; font-weight: bold; display: block; font-size: 15px; }
+
+  .grid-area { padding: 6px; background: rgba(23, 15, 40, 0.6); margin: 5px 8px; border-radius: 8px; border: 1px solid #431407; }
+  .slot-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .slot-cell { aspect-ratio: 1; background: linear-gradient(135deg, #2e1065, #0f052d); border: 1px solid #5b21b6; border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 24px; }
+  .cell-win { border-color: #facc15; box-shadow: 0 0 10px #facc15, inset 0 0 6px #facc15; transform: scale(1.03); background: #78350f; }
+
+  .win-banner { text-align: center; padding: 8px; background: linear-gradient(90deg, transparent, rgba(30,27,75,0.9), transparent); }
+  .win-main-text { font-size: 20px; font-weight: 900; }
+  .win-main-text span { color: #facc15; }
+  .win-detail-text { color: #60a5fa; font-size: 11px; }
+
+  .bottom-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 5px 12px; }
+  .panel-left, .panel-right { background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 8px; padding: 6px; }
+  .freespin-counter { border-left: 4px solid #a855f7; text-align: left; padding-left: 10px;}
+  .freespin-counter small { color: #94a3b8; font-size: 9px; display: block;}
+  .freespin-counter .count-num { font-size: 20px; color: #a855f7; font-weight: bold;}
+  .multiplier-orb { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .orb-wing { width: 42px; height: 42px; background: #eab308; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: black; font-size: 12px; font-weight: 900; box-shadow: 0 0 12px #eab308; }
+  .multiplier-orb small { font-size: 8px; color: #cbd5e1; margin-top: 3px;}
+
+  .control-bar { background: #000; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; font-size: 11px; }
+  .control-info span { color: #facc15; font-weight: bold; font-size: 12px; }
+  .spin-action-btn { background: radial-gradient(circle, #facc15 0%, #ca8a04 100%); border: 2px solid #fef08a; color: black; width: 50px; height: 50px; border-radius: 50%; font-weight: 900; font-size: 11px; cursor: pointer; }
+  .spin-action-btn:active { transform: scale(0.94); }
+  .spin-action-btn:disabled { background: #475569; color: #94a3b8; border-color:#64748b;}
+  .brand-footer { text-align: center; font-size: 9px; color: #475569; padding: 3px 0; background: #000; letter-spacing: 1px;}
+
+  /* --- ADMIN PANEL --- */
+  .admin-panel { width: 100%; max-width: 650px; background: #0f172a; border: 2px solid #3b82f6; border-radius: 15px; padding: 20px; box-shadow: 0 0 25px rgba(59,130,246,0.3); }
+  .admin-panel h3 { color: #3b82f6; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 4px;}
+  .table-wrapper { background: #020617; border: 1px solid #1e293b; border-radius: 8px; overflow-x: auto; margin-bottom: 15px; }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+  th, td { padding: 8px; border-bottom: 1px solid #1e293b; }
+  th { background: #1e293b; color: #3b82f6; }
+  td input { background: #0f172a; border: 1px solid #334155; color: #facc15; padding: 3px 5px; width: 80px; border-radius: 4px; }
+  
+  .btn-approve { background: #10b981; border: none; padding: 4px 8px; border-radius: 4px; color: black; font-weight: bold; cursor: pointer; margin-right: 2px;}
+  .btn-reject { background: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; }
+  .btn-update { background: #3b82f6; border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; }
+  .admin-btn-danger { background: #dc2626; color: white; border: none; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+  .admin-nav-btn { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+  <div id="register-screen" class="auth-container">
+    <h2>OLYMPUS REGISTER</h2>
+    <div class="input-group"><label>Email Resmi</label><input type="email" id="reg-email" placeholder="nama@email.com"></div>
+    <div class="input-row">
+      <div class="input-group"><label>NIK KTP (16 Digit)</label><input type="number" id="reg-nik" placeholder="3201xxxxxxxxxxxx"></div>
+      <div class="input-group"><label>Nomor HP</label><input type="number" id="reg-phone" placeholder="08xxxxxxxx"></div>
+    </div>
+    <div class="input-row">
+      <div class="input-group"><label>Username Game</label><input type="text" id="reg-user" placeholder="PlayerGacor"></div>
+      <div class="input-group"><label>Buat Password</label><input type="password" id="reg-pass" placeholder="••••••••"></div>
+    </div>
+    <button type="button" class="auth-btn" onclick="handleRegister()">DAFTAR SEKARANG</button>
+    <div id="reg-error" class="error-msg"></div><div id="reg-success" class="success-msg"></div>
+    <div class="switch-auth-lnk" onclick="switchScreen('login-screen')">Sudah punya akun? Login disini</div>
+  </div>
+
+  <div id="login-screen" class="auth-container hidden">
+    <h2>OLYMPUS LOGIN</h2>
+    <div class="input-group"><label>Username / ID Game</label><input type="text" id="login-user" placeholder="Masukkan Username"></div>
+    <div class="input-group"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+    <button type="button" class="auth-btn" onclick="handleLogin()">MASUK GERBANG</button>
+    <div id="login-error" class="error-msg"></div>
+    <div class="switch-auth-lnk" onclick="switchScreen('register-screen')">Belum punya akun? Daftar gratis</div>
+  </div>
+
+  <div id="deposit-screen" class="auth-container hidden">
+    <h2>SIMULASI DEPOSIT</h2>
+    <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 15px;">Kirim pengajuan saldo mainan ke Admin Pokeh</p>
+    <div class="input-group">
+      <label>Metode Transfer Bank (Mainan)</label>
+      <select id="dep-method">
+        <option value="BANK BCA">BCA (Simulasi)</option>
+        <option value="BANK MANDIRI">MANDIRI (Simulasi)</option>
+        <option value="DANA GAME">DANA (Simulasi)</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Nominal Deposit (Rp)</label>
+      <input type="number" id="dep-amount" value="100000" placeholder="Contoh: 100000">
+    </div>
+    <button type="button" class="auth-btn" onclick="submitDepositRequest()">KIRIM FORM DEPOSIT</button>
+    <button type="button" class="auth-btn" style="background:#475569; color:white; margin-top:8px;" onclick="switchScreen('game-screen')">KEMBALI KE GAME</button>
+    <div id="dep-msg" class="success-msg"></div>
+  </div>
+
+  <div id="game-screen" class="game-container hidden">
+    <div class="game-top-bar">
+      <span id="game-user-display">User: -</span>
+      <div>
+        <span style="color:#10b981; font-weight:bold; cursor:pointer; margin-right:10px;" onclick="switchScreen('deposit-screen')">💵 Deposit</span>
+        <span id="go-to-admin-lnk" style="color: #3b82f6; cursor: pointer; font-weight: bold;" class="hidden" onclick="openAdminPanel()">⚙️ Panel Admin</span>
+      </div>
+    </div>
+
+    <div class="game-header">
+      <div class="game-title">GATES OF OLYMPUS</div>
+      <div class="tumble-box">KEMENANGAN TUMBLE <span id="tumble-value">0.00 Rp</span></div>
+    </div>
+
+    <div class="grid-area"><div id="slot-grid-board" class="slot-grid"></div></div>
+
+    <div class="win-banner">
+      <div class="win-main-text" id="win-status">MENANG <span id="win-amount">0.00 Rp</span></div>
+      <div class="win-detail-text" id="win-detail">SILAHKAN LAKUKAN SPIN</div>
+    </div>
+
+    <div class="bottom-dashboard">
+      <div class="panel-left freespin-counter"><small>SPIN GRATIS TERSISA</small><div class="count-num" id="fs-count">7</div></div>
+      <div class="panel-right multiplier-orb"><div class="orb-wing" id="multiplier-display">1x</div><small>TOTAL PENGALI</small></div>
+    </div>
+
+    <div class="control-bar">
+      <div class="control-info">KREDIT <br> <span id="credit-display">0.00 Rp</span></div>
+      <div><button type="button" class="spin-action-btn" id="btn-trigger-spin" onclick="runOlympusSpin()">SPIN</button></div>
+      <div class="control-info" style="text-align: right;">TARUHAN <br> <span id="bet-display">400.00 Rp</span></div>
+    </div>
+    <div class="brand-footer">⚡ PRAGMATIC PLAY &bull; <span id="game-live-clock">23:57</span> ⚡</div>
+  </div>
+
+  <div id="admin-screen" class="admin-panel hidden">
+    <h3>⚙️ MASTER ADMIN DASHBOARD (Pokeh)</h3>
+    <button type="button" class="admin-nav-btn" onclick="switchScreen('game-screen')">⬅️ Kembali Ke Game</button>
+    
+    <h4 style="color:#facc15; font-size:14px; margin-bottom:5px;">📥 PERSETUJUAN DEPOSIT MASUK</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Tiket</th>
+            <th>Username</th>
+            <th>Metode</th>
+            <th>Nominal</th>
+            <th>Status</th>
+            <th>Tindakan Admin</th>
+          </tr>
+        </thead>
+        <tbody id="admin-deposit-table-body">
+          </tbody>
+      </table>
+    </div>
+
+    <h4 style="color:#3b82f6; font-size:14px; margin-top:15px; margin-bottom:5px;">👥 DATA USERS & KREDIT MANUALLY</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>NIK (KTP)</th>
+            <th>Saldo Kredit</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="admin-user-table-body"></tbody>
+      </table>
+    </div>
+
+    <div class="input-group" style="max-width:300px;">
+      <label>Atur Pola Setelan Menang (Next Spin)</label>
+      <select id="adm-force-mult" style="padding:8px; background:#020617; color:white; border-radius:6px; border:2px solid #334155; width:100%;">
+        <option value="1">Normal (Sistem Acak)</option>
+        <option value="500">Kakek Petir Gacor (500x)</option>
+        <option value="5000">MAXWIN OLYMPUS (5000x)</option>
+      </select>
+    </div>
+    <button type="button" class="admin-btn-danger" onclick="processLogout()">LOGOUT ADMIN</button>
+  </div>
+
+<script>
+  // --- DATABASE & DEPOSIT MEMORY ---
+  if (!localStorage.getItem('usersDB')) {
+    const defaultUsers = {
+      'Pokeh': { username: 'Pokeh', pass: 'admin1', email: 'admin@olympus.com', nik: '3201000000000000', phone: '0811', credit: 500000.00 }
+    };
+    localStorage.setItem('usersDB', JSON.stringify(defaultUsers));
+  }
+  if (!localStorage.getItem('depositTickets')) {
+    localStorage.setItem('depositTickets', JSON.stringify([]));
+  }
+
+  let usersDB = JSON.parse(localStorage.getItem('usersDB'));
+  let loggedInUser = null;
+  let currentBet = 400.00;
+  let freeSpinsLeft = 7;
+  const itemPool = ['💎', '🔺', '🟡', '👑', '🍇', '🔮', '🔱'];
+
+  window.onload = () => {
+    initGrid();
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('game-live-clock').innerText = now.toTimeString().split(' ')[0].substring(0,5);
+    }, 1000);
+  };
+
+  function initGrid() {
+    const board = document.getElementById('slot-grid-board'); board.innerHTML = '';
+    for (let i = 0; i < 30; i++) board.innerHTML += `<div class="slot-cell">${itemPool[Math.floor(Math.random() * itemPool.length)]}</div>`;
+  }
+
+  function switchScreen(id) {
+    document.getElementById('register-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('deposit-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('admin-screen').classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  // --- REGISTER & LOGIN ---
+  function handleRegister() {
+    const email = document.getElementById('reg-email').value.trim();
+    const nik = document.getElementById('reg-nik').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const user = document.getElementById('reg-user').value.trim();
+    const pass = document.getElementById('reg-pass').value;
+    const errEl = document.getElementById('reg-error'); const succEl = document.getElementById('reg-success');
+    errEl.innerText = ""; succEl.innerText = "";
+
+    if (!email || !nik || !phone || !user || !pass) { errEl.innerText = "Semua data wajib diisi!"; return; }
+    if (nik.length !== 16) { errEl.innerText = "NIK harus 16 digit!"; return; }
+    if (usersDB[user]) { errEl.innerText = "Username sudah dipakai!"; return; }
+
+    usersDB[user] = { username: user, pass: pass, email: email, nik: nik, phone: phone, credit: 0.00 }; // Saldo awal 0 biar deposit dulu!
+    localStorage.setItem('usersDB', JSON.stringify(usersDB));
+    succEl.innerText = "Daftar Berhasil! Saldo Anda Rp 0. Silakan login & lakukan simulasi deposit.";
+    setTimeout(() => { switchScreen('login-screen'); }, 2000);
+  }
+
+  function handleLogin() {
+    const u = document.getElementById('login-user').value.trim();
+    const p = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error'); errEl.innerText = "";
+
+    if (usersDB[u] && usersDB[u].pass === p) {
+      loggedInUser = u;
+      document.getElementById('game-user-display').innerText = `User: ${u}`;
+      document.getElementById('go-to-admin-lnk').classList.toggle('hidden', u !== 'Pokeh');
+      updateGameUI(); switchScreen('game-screen');
+    } else {
+      errEl.innerText = "Username atau Password salah!";
+    }
+  }
+
+  function updateGameUI() {
+    if(!loggedInUser) return;
+    document.getElementById('credit-display').innerText = usersDB[loggedInUser].credit.toLocaleString('id-ID') + ' Rp';
+    document.getElementById('bet-display').innerText = currentBet.toLocaleString('id-ID') + ' Rp';
+    document.getElementById('fs-count').innerText = freeSpinsLeft;
+  }
+
+  // --- SUBMIT DEPOSIT (PLAYER SIDE) ---
+  function submitDepositRequest() {
+    const amount = parseFloat(document.getElementById('dep-amount').value);
+    const method = document.getElementById('dep-method').value;
+    const msgEl = document.getElementById('dep-msg');
+
+    if(isNaN(amount) || amount <= 0) { alert('Nominal tidak valid!'); return; }
+
+    let tickets = JSON.parse(localStorage.getItem('depositTickets'));
+    const newTicket = {
+      id: 'DEP-' + Math.floor(1000 + Math.random() * 9000),
+      username: loggedInUser,
+      method: method,
+      amount: amount,
+      status: 'PENDING'
+    };
+    tickets.push(newTicket);
+    localStorage.setItem('depositTickets', JSON.stringify(tickets));
+
+    msgEl.innerText = `Sukses mengajukan ${newTicket.id} senilai Rp ${amount.toLocaleString('id-ID')}. Sampaikan ke Admin Pokeh untuk di-Approve!`;
+    document.getElementById('dep-amount').value = "100000";
+  }
+
+  // --- OPEN ADMIN BOARD ---
+  function openAdminPanel() {
+    // 1. Render Tabel Data User
+    const uBody = document.getElementById('admin-user-table-body'); uBody.innerHTML = '';
+    for (let key in usersDB) {
+      let uData = usersDB[key];
+      uBody.innerHTML += `<tr>
+        <td><strong>${uData.username}</strong></td>
+        <td>${uData.email}</td>
+        <td><code>${uData.nik}</code></td>
+        <td><input type="number" id="inp-cred-${uData.username}" value="${Math.floor(uData.credit)}"></td>
+        <td><button class="btn-update" onclick="saveUserCreditManual('${uData.username}')">Save</button></td>
+      </tr>`;
+    }
+
+    // 2. Render Tabel Request Deposit
+    renderAdminDepositTable();
+    switchScreen('admin-screen');
+  }
+
+  function renderAdminDepositTable() {
+    const dBody = document.getElementById('admin-deposit-table-body'); dBody.innerHTML = '';
+    let tickets = JSON.parse(localStorage.getItem('depositTickets'));
+
+    if(tickets.length === 0) {
+      dBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">Tidak ada riwayat pengajuan deposit.</td></tr>';
+      return;
+    }
+
+    tickets.reverse().forEach((tk, idx) => {
+      let actionButtons = tk.status === 'PENDING' 
+        ? `<button class="btn-approve" onclick="actionDeposit('${tk.id}', 'APPROVE')">Setuju</button>
+           <button class="btn-reject" onclick="actionDeposit('${tk.id}', 'REJECT')">Tolak</button>`
+        : `<span style="color:${tk.status === 'APPROVED' ? '#10b981':'#ef4444'}">${tk.status}</span>`;
+
+      dBody.innerHTML += `<tr>
+        <td><code>${tk.id}</code></td>
+        <td><b>${tk.username}</b></td>
+        <td><small>${tk.method}</small></td>
+        <td style="color:#facc15;"><b>Rp ${tk.amount.toLocaleString('id-ID')}</b></td>
+        <td><span style="font-size:10px; background:#1e293b; padding:2px 5px; border-radius:4px;">${tk.status}</span></td>
+        <td>${actionButtons}</td>
+      </tr>`;
+    });
+  }
+
+  function actionDeposit(ticketId, action) {
+    let tickets = JSON.parse(localStorage.getItem('depositTickets'));
+    let tk = tickets.find(t => t.id === ticketId);
+
+    if (tk && tk.status === 'PENDING') {
+      if (action === 'APPROVE') {
+        tk.status = 'APPROVED';
+        // Tambah kredit user target
+        if(usersDB[tk.username]) {
+          usersDB[tk.username].credit += tk.amount;
+        }
+      } else {
+        tk.status = 'REJECTED';
+      }
+      localStorage.setItem('depositTickets', JSON.stringify(tickets));
+      localStorage.setItem('usersDB', JSON.stringify(usersDB));
+      alert(`Tiket ${ticketId} berhasil di-${action}!`);
+      openAdminPanel(); // refresh data tabel
+      updateGameUI();
+    }
+  }
+
+  function saveUserCreditManual(username) {
+    const val = parseFloat(document.getElementById(`inp-cred-${username}`).value);
+    if (!isNaN(val)) {
+      usersDB[username].credit = val;
+      localStorage.setItem('usersDB', JSON.stringify(usersDB));
+      alert('Berhasil simpan saldo!'); updateGameUI();
+    }
+  }
+
+  function processLogout() { loggedInUser = null; switchScreen('login-screen'); }
+
+  // --- SLOT SPIN ENGINE ---
+  function runOlympusSpin() {
+    let userCredit = usersDB[loggedInUser].credit;
+    if (userCredit < currentBet && freeSpinsLeft <= 0) { alert("Kredit Habis! Silahkan ajukan deposit."); return; }
+
+    const btn = document.getElementById('btn-trigger-spin'); btn.disabled = true;
+    if (freeSpinsLeft > 0) { freeSpinsLeft--; } else { userCredit -= currentBet; }
+
+    usersDB[loggedInUser].credit = userCredit;
+    localStorage.setItem('usersDB', JSON.stringify(usersDB)); updateGameUI();
+
+    document.getElementById('tumble-value').innerText = "0.00 Rp";
+    document.getElementById('win-amount').innerText = "0.00 Rp";
+    document.getElementById('win-status').innerHTML = "MENANG <span>0.00 Rp</span>";
+    document.getElementById('win-detail').innerText = "MENGGUNCANG OLYMPUS...";
+    document.getElementById('multiplier-display').innerText = "1x";
+
+    let fMult = parseInt(document.getElementById('adm-force-mult').value);
+    const cells = document.querySelectorAll('.slot-cell');
+    let spinInterval = setInterval(() => {
+      cells.forEach(c => { c.innerText = itemPool[Math.floor(Math.random() * itemPool.length)]; c.classList.remove('cell-win'); });
+    }, 60);
+
+    setTimeout(() => {
+      clearInterval(spinInterval); let counts = {};
+      cells.forEach(c => { const finalSym = itemPool[Math.floor(Math.random() * itemPool.length)]; c.innerText = finalSym; counts[finalSym] = (counts[finalSym] || 0) + 1; });
+
+      let maxSymbol = itemPool[0];
+      for(let sym in counts) { if(counts[sym] > counts[maxSymbol]) maxSymbol = sym; }
+
+      if (counts[maxSymbol] >= 8 || fMult > 1) {
+        cells.forEach(c => { if(c.innerText === maxSymbol || fMult > 1) c.classList.add('cell-win'); });
+        let baseWin = currentBet * (counts[maxSymbol] ? counts[maxSymbol] * 0.4 : 2);
+        let totalWin = baseWin * fMult;
+        
+        usersDB[loggedInUser].credit += totalWin;
+        localStorage.setItem('usersDB', JSON.stringify(usersDB));
+
+        document.getElementById('tumble-value').innerText = baseWin.toLocaleString('id-ID') + " Rp";
+        document.getElementById('multiplier-display').innerText = fMult + "x";
+        document.getElementById('win-amount').innerText = totalWin.toLocaleString('id-ID') + " Rp";
+        document.getElementById('win-detail').innerText = `X${counts[maxSymbol] || 12} Simbol Pecah Terbakar!`;
+        document.getElementById('adm-force-mult').value = "1";
+      } else {
+        document.getElementById('win-detail').innerText = "Zonk! Coba lagi.";
+      }
+
+      if (freeSpinsLeft <= 0) freeSpinsLeft = 7;
+      updateGameUI(); btn.disabled = false;
+    }, 1000);
+  }
+</script>
+</body>
+</html>
